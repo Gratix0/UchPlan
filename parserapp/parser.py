@@ -170,6 +170,8 @@ def load_json_to_models(rup_data):
         gos_type=rup_data.get("gos_type")
     )
 
+    all_warnings = []  # Список для хранения всех опечаток
+
     # Обрабатываем циклы (Category) и дочерние циклы (StudyCycle)
     for cycle in rup_data.get("stady_plan", []):
         category_obj = Category.objects.create(
@@ -189,6 +191,8 @@ def load_json_to_models(rup_data):
                 # Создаем Module из плана строки
                 module_name = plan.get("discipline")
                 module_warnings = validate_text(module_name)
+                if module_warnings:
+                    all_warnings.extend(module_warnings)  # Добавляем опечатки в общий список
                 module_obj = Module.objects.create(
                     id=plan["id"],
                     name=module_name,
@@ -217,6 +221,8 @@ def load_json_to_models(rup_data):
                 for child_plan in plan.get("children_strings", []):
                     discipline_name = child_plan.get("discipline")
                     discipline_warnings = validate_text(discipline_name)
+                    if discipline_warnings:
+                        all_warnings.extend(discipline_warnings)  # Добавляем опечатки в общий список
                     disipline_obj = Disipline.objects.create(
                         id=child_plan["id"],
                         name=discipline_name,
@@ -234,6 +240,10 @@ def load_json_to_models(rup_data):
                             count_of_clocks=int(clock.get("count_of_clocks") or 0),
                             plan_string=disipline_obj
                         )
+
+        print("=== Найденные опечатки ===")
+        for warning in all_warnings:
+            print(warning)
 
 
 def models_to_json():
