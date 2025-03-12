@@ -29,22 +29,29 @@ class Command(BaseCommand):
         """Выводит содержимое моделей, включая информацию о предупреждениях."""
         print("\n=== Учебные планы ===")
         for sp in StudyPlan.objects.all():
-            print(f"{sp.id} | {sp.name} (Спец.: {sp.specialization_code}, ГОС: {sp.gos_type}, Дата: {sp.create_date})")
+            print(
+                f"{sp.id} | {sp.name} (Спец.: {sp.specialization_code}, ГОС: {sp.gos_type}, Дата: {sp.create_date}) | Warnings: {sp.warnings} | Description: {sp.warning_description or 'Нет'}")
             for category in sp.cycles.all():
-                print(f"   └─ Категория: {category.id} | {category.identificator}: {category.cycles}")
+                print(
+                    f"   └─ Категория: {category.id} | {category.identificator}: {category.cycles} | Warnings: {category.warnings} | Description: {category.warning_description or 'Нет'}")
                 for study_cycle in category.child_cycles.all():
-                    print(f"       └─ Учебный цикл: {study_cycle.id} | {study_cycle.identificator}: {study_cycle.cycles}")
+                    print(
+                        f"       └─ Учебный цикл: {study_cycle.id} | {study_cycle.identificator}: {study_cycle.cycles} | Warnings: {study_cycle.warnings} | Description: {study_cycle.warning_description or 'Нет'}")
                     for module in study_cycle.plan_strings.all():
-                        print(f"           └─ Модуль: {module.id} | Дисциплина: {module.name} | Warnings: {module.warnings} | Description: {module.warning_description or 'Нет'}")
+                        print(
+                            f"           └─ Модуль: {module.id} | Дисциплина: {module.name} | Warnings: {module.warnings} | Description: {module.warning_description or 'Нет'}")
                         for disipline in module.child_plan_strings.all():
-                            print(f"               └─ Дисциплина: {disipline.id} | {disipline.name} | Warnings: {disipline.warnings} | Description: {disipline.warning_description or 'Нет'}")
+                            print(
+                                f"               └─ Дисциплина: {disipline.id} | {disipline.name} | Warnings: {disipline.warnings} | Description: {disipline.warning_description or 'Нет'}")
                             clock_cells = disipline.clock_cells.all()
                             if clock_cells:
                                 print("                   └─ Ячейки часов (привязанные к дисциплине):")
                                 for clock in clock_cells:
-                                    print(f"                      ⏱ {clock.id} | Курс {clock.course}, Семестр {clock.semestr}, Часы: {clock.count_of_clocks}")
+                                    print(
+                                        f"                      ⏱ {clock.id} | Курс {clock.course}, Семестр {clock.semestr}, Часы: {clock.count_of_clocks}")
                     clock_cells = study_cycle.clock_cells.all()
                     if clock_cells:
                         print("           └─ Ячейки часов (привязанные к учебному циклу):")
                         for clock in clock_cells:
-                            print(f"               ⏱ {clock.id} | Курс {clock.course}, Семестр {clock.semestr}, Часы: {clock.count_of_clocks}")
+                            print(
+                                f"               ⏱ {clock.id} | Курс {clock.course}, Семестр {clock.semestr}, Часы: {clock.count_of_clocks}")

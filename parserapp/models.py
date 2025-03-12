@@ -11,9 +11,8 @@ class StudyPlan(models.Model):
     name = models.CharField("Название", max_length=255)
     create_date = models.DateField("Дата документа")
     gos_type = models.CharField("Тип ГОС", max_length=50)
-    # Новые поля для предупреждений
-    warning = models.BooleanField("Наличие предупреждения", default=False)
-    warning_description = models.TextField("Описание предупреждения", blank=True, null=True)
+    warnings = models.BooleanField("Наличие предупреждений", default=False)
+    warning_description = models.TextField("Описание предупреждений", null=True, blank=True)
 
     class Meta:
         verbose_name = "Учебный план"
@@ -33,9 +32,8 @@ class Category(models.Model):
         related_name='cycles',
         verbose_name="Учебный план"
     )
-    # Новые поля для предупреждений
-    warning = models.BooleanField("Наличие предупреждения", default=False)
-    warning_description = models.TextField("Описание предупреждения", blank=True, null=True)
+    warnings = models.BooleanField("Наличие предупреждений", default=False)
+    warning_description = models.TextField("Описание предупреждений", null=True, blank=True)
 
     class Meta:
         verbose_name = "Категория"
@@ -55,9 +53,8 @@ class StudyCycle(models.Model):
         related_name='child_cycles',
         verbose_name="Категория"
     )
-    # Новые поля для предупреждений
-    warning = models.BooleanField("Наличие предупреждения", default=False)
-    warning_description = models.TextField("Описание предупреждения", blank=True, null=True)
+    warnings = models.BooleanField("Наличие предупреждений", default=False)
+    warning_description = models.TextField("Описание предупреждений", null=True, blank=True)
 
     class Meta:
         verbose_name = "Учебный цикл"
@@ -70,21 +67,19 @@ class Module(models.Model):
     """
     id = models.UUIDField("ID", primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField("Дисциплина", max_length=255)
+    warnings = models.BooleanField("Наличие предупреждений", default=False)
+    warning_description = models.TextField("Описание предупреждений", null=True, blank=True)
     studey_cycle = models.ForeignKey(
         StudyCycle,
         on_delete=models.CASCADE,
         related_name='plan_strings',
         verbose_name="Учебный цикл"
     )
-    # Новые поля для предупреждений
-    warning = models.BooleanField("Наличие предупреждения", default=False)
-    warning_description = models.TextField("Описание предупреждения", blank=True, null=True)
+
 
     class Meta:
         verbose_name = "Модуль"
         verbose_name_plural = "Модули"
-    warnings = models.BooleanField("Наличие предупреждений", default=False)
-    warning_description = models.TextField("Описание предупреждений", null=True, blank=True)
 
 
 class Disipline(models.Model):
@@ -99,15 +94,14 @@ class Disipline(models.Model):
         related_name='child_plan_strings',
         verbose_name="Модуль"
     )
-    # Новые поля для предупреждений
-    warning = models.BooleanField("Наличие предупреждения", default=False)
-    warning_description = models.TextField("Описание предупреждения", blank=True, null=True)
+
+    warnings = models.BooleanField("Наличие предупреждений", default=False)
+    warning_description = models.TextField("Описание предупреждений", null=True, blank=True)
 
     class Meta:
         verbose_name = "Дисциплина"
         verbose_name_plural = "Дисциплины"
-    warnings = models.BooleanField("Наличие предупреждений", default=False)
-    warning_description = models.TextField("Описание предупреждений", null=True, blank=True)
+
 
 
 class ClockCell(models.Model):
@@ -120,6 +114,8 @@ class ClockCell(models.Model):
     course = models.IntegerField("Курс", null=True, blank=True)
     semestr = models.IntegerField("Семестр", null=True, blank=True)
     count_of_clocks = models.IntegerField("Количество часов", null=True, blank=True)
+    warnings = models.BooleanField("Наличие предупреждений", default=False)
+    warning_description = models.TextField("Описание предупреждений", null=True, blank=True)
     # Связь с родительским планом строки
     plan_string = models.ForeignKey(
         Disipline,
@@ -138,9 +134,7 @@ class ClockCell(models.Model):
         blank=True,
         verbose_name="Дочерний план строки"
     )
-    # Новые поля для предупреждений
-    warning = models.BooleanField("Наличие предупреждения", default=False)
-    warning_description = models.TextField("Описание предупреждения", blank=True, null=True)
+
 
     class Meta:
         verbose_name = "Ячейка часов"

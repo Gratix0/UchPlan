@@ -172,20 +172,42 @@ def load_json_to_models(rup_data):
 
     all_warnings = []  # Список для хранения всех опечаток
 
+    # Проверяем имя StudyPlan
+    study_plan_name = rup_data.get("name")
+    study_plan_warnings = validate_text(study_plan_name)
+    if study_plan_warnings:
+        all_warnings.extend(study_plan_warnings)
+
     # Обрабатываем циклы (Category) и дочерние циклы (StudyCycle)
     for cycle in rup_data.get("stady_plan", []):
+        # Проверяем имя Category
+        category_name = cycle.get("cycles")
+        category_warnings = validate_text(category_name)
+        if category_warnings:
+            all_warnings.extend(category_warnings)
+
         category_obj = Category.objects.create(
             id=cycle["id"],
             identificator=cycle.get("identificator"),
-            cycles=cycle.get("cycles"),
-            study_plan=study_plan_obj
+            cycles=category_name,
+            study_plan=study_plan_obj,
+            warnings=bool(category_warnings),  # Добавляем поле warnings
+            warning_description=category_warnings  # Добавляем поле warning_description
         )
         for child in cycle.get("children", []):
+            # Проверяем имя StudyCycle
+            study_cycle_name = child.get("cycles")
+            study_cycle_warnings = validate_text(study_cycle_name)
+            if study_cycle_warnings:
+                all_warnings.extend(study_cycle_warnings)
+
             study_cycle_obj = StudyCycle.objects.create(
                 id=child["id"],
                 identificator=child.get("identificator"),
-                cycles=child.get("cycles"),
-                category=category_obj
+                cycles=study_cycle_name,
+                category=category_obj,
+                warnings=bool(study_cycle_warnings),  # Добавляем поле warnings
+                warning_description=study_cycle_warnings  # Добавляем поле warning_description
             )
             for plan in child.get("plans_of_string", []):
                 # Создаем Module из плана строки
