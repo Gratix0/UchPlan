@@ -5,20 +5,33 @@ import json
 import uuid
 from datetime import datetime
 
-from parserapp.models import StudyPlan, Category, StudyCycle, Module, Disipline, ClockCell
+from parserapp.models import StudyPlan, Category, StudyCycle, Module, Disipline, ClockCell, WhitelistWord
 from pyaspeller import YandexSpeller
+
+_cached_whitelist = None  # Глобальная переменная для кеширования вайтлиста
+
+def get_whitelist():
+    """Возвращает множество слов из вайтлиста, используя кеш."""
+    global _cached_whitelist
+    if _cached_whitelist is None:
+        _cached_whitelist = set(WhitelistWord.objects.values_list('word', flat=True))
+    return _cached_whitelist
 
 def validate_text(text):
     """
-    Проверяет текст на наличие ошибок с помощью Yandex Speller.
+    Проверяет текст на наличие ошибок с помощью Yandex Speller,
+    игнорируя слова из вайтлиста.
     Возвращает список ошибок или None, если ошибок нет.
     """
     speller = YandexSpeller()
     changes = speller.spell(text)
     if changes:
         errors = []
+        whitelist_words = get_whitelist()  # Используем кешированное множество
         for change in changes:
-            errors.append(f"Возможно ошибка в слове '{change['word']}' возможно это подходящее слово: {change['s']}")
+            word_lower = change['word'].lower()
+            if word_lower not in whitelist_words:
+                errors.append(f"Возможно ошибка в слове '{change['word']}' возможно это подходящее слово: {change['s']}")
         return errors
     return None
 
