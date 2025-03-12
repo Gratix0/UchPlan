@@ -1,14 +1,14 @@
 {
     "id": "501a6845-4a04-4301-b5e6-44239733035a",
     "specialization_code": "09.02.07",
-    "name": "ИНФОРМАЦИОННЫЕ СИСТЕМЫ И ПРОГРАММИРОВАНИЕ",
+    "name": "ИНФАРМАЦИОННЫЕ СЫСТЕМЫ И ПРОГРАММИРОВАНИЕ",
     "create_date": "2016-12-09T00:00:00",
     "gos_type": "4",
     "stady_plan": [
         {
             "id": "2f34191b-e66a-413c-aa7d-d31b3b6fb6dc",
             "identificator": "ОП",
-            "cycles": "ОБЩЕОБРАЗОВАТЕЛЬНАЯ ПОДГОТОВКА",
+            "cycles": "ОБЩЕОБРОЗОВАТИЛЬНАЯ ПОДГАОТОВКА",
             "children": [
                 {
                     "id": "58439524-4bdb-4a21-aa17-d506c9d33cbb",
@@ -32,7 +32,7 @@
                     "plans_of_string": [
                         {
                             "id": "bd00781e-bf21-4a3c-b999-250a38175438",
-                            "discipline": "Базовые дисциплины",
+                            "discipline": "БазовыЫЫае дисциплины",
                             "code_of_discipline": "БД",
                             "code_of_cycle_block": "110beb7d-67ee-48de-b761-d7c5728fa6e8",
                             "clock_cells": [],
@@ -40,7 +40,7 @@
                         },
                         {
                             "id": "1ccc3729-70d7-4e12-92b3-9ae36361c13a",
-                            "discipline": "Профильные дисциплины",
+                            "discipline": "ПрофЕльныыуые дисциплины",
                             "code_of_discipline": "ПД",
                             "code_of_cycle_block": "110beb7d-67ee-48de-b761-d7c5728fa6e8",
                             "clock_cells": [],
@@ -3753,7 +3753,7 @@
                     "plans_of_string": [
                         {
                             "id": "d79d7202-adac-4490-a670-0d80ca4bf578",
-                            "discipline": "Подготовка выпускной квалификационной работы",
+                            "discipline": "Подготовка выыыпускной квалификационной работы",
                             "code_of_discipline": "ГИА.01",
                             "code_of_cycle_block": "234a38c0-6ac0-48cf-a012-c5b42ba8e2bf",
                             "clock_cells": [
@@ -3834,7 +3834,7 @@
                         },
                         {
                             "id": "54260025-8ff4-423c-b915-7a9d400e36a3",
-                            "discipline": "Проведение государственных экзаменов",
+                            "discipline": "Провидение гасударственных экзаминов",
                             "code_of_discipline": "ГИА.04",
                             "code_of_cycle_block": "234a38c0-6ac0-48cf-a012-c5b42ba8e2bf",
                             "clock_cells": [

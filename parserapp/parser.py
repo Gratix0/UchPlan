@@ -209,6 +209,14 @@ def load_json_to_models(rup_data):
     Загружает данные из JSON-структуры, сформированной get_plan_rup(),
     в модели Django. Осуществляет предварительное преобразование даты.
     """
+    # Очистка базы данных перед загрузкой новых данных
+    StudyPlan.objects.all().delete()
+    Category.objects.all().delete()
+    StudyCycle.objects.all().delete()
+    Module.objects.all().delete()
+    Disipline.objects.all().delete()
+    ClockCell.objects.all().delete()
+
     create_date_str = rup_data.get("create_date")
     try:
         create_date = datetime.strptime(create_date_str, "%Y-%m-%dT%H:%M:%S").date()
