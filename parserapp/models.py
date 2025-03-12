@@ -11,6 +11,9 @@ class StudyPlan(models.Model):
     name = models.CharField("Название", max_length=255)
     create_date = models.DateField("Дата документа")
     gos_type = models.CharField("Тип ГОС", max_length=50)
+    # Новые поля для предупреждений
+    warning = models.BooleanField("Наличие предупреждения", default=False)
+    warning_description = models.TextField("Описание предупреждения", blank=True, null=True)
 
     class Meta:
         verbose_name = "Учебный план"
@@ -30,6 +33,9 @@ class Category(models.Model):
         related_name='cycles',
         verbose_name="Учебный план"
     )
+    # Новые поля для предупреждений
+    warning = models.BooleanField("Наличие предупреждения", default=False)
+    warning_description = models.TextField("Описание предупреждения", blank=True, null=True)
 
     class Meta:
         verbose_name = "Категория"
@@ -38,7 +44,7 @@ class Category(models.Model):
 
 class StudyCycle(models.Model):
     """
-    Дочерний образовательный цикл, привязанный к StudyCycle.
+    Дочерний образовательный цикл, привязанный к Category.
     """
     id = models.UUIDField("ID", primary_key=True, default=uuid.uuid4, editable=False)
     identificator = models.CharField("Идентификатор", max_length=50)
@@ -49,6 +55,9 @@ class StudyCycle(models.Model):
         related_name='child_cycles',
         verbose_name="Категория"
     )
+    # Новые поля для предупреждений
+    warning = models.BooleanField("Наличие предупреждения", default=False)
+    warning_description = models.TextField("Описание предупреждения", blank=True, null=True)
 
     class Meta:
         verbose_name = "Учебный цикл"
@@ -67,6 +76,9 @@ class Module(models.Model):
         related_name='plan_strings',
         verbose_name="Учебный цикл"
     )
+    # Новые поля для предупреждений
+    warning = models.BooleanField("Наличие предупреждения", default=False)
+    warning_description = models.TextField("Описание предупреждения", blank=True, null=True)
 
     class Meta:
         verbose_name = "Модуль"
@@ -87,6 +99,9 @@ class Disipline(models.Model):
         related_name='child_plan_strings',
         verbose_name="Модуль"
     )
+    # Новые поля для предупреждений
+    warning = models.BooleanField("Наличие предупреждения", default=False)
+    warning_description = models.TextField("Описание предупреждения", blank=True, null=True)
 
     class Meta:
         verbose_name = "Дисциплина"
@@ -123,6 +138,9 @@ class ClockCell(models.Model):
         blank=True,
         verbose_name="Дочерний план строки"
     )
+    # Новые поля для предупреждений
+    warning = models.BooleanField("Наличие предупреждения", default=False)
+    warning_description = models.TextField("Описание предупреждения", blank=True, null=True)
 
     class Meta:
         verbose_name = "Ячейка часов"
@@ -136,4 +154,3 @@ class ClockCell(models.Model):
             raise ValidationError("Ячейка часов должна быть привязана либо к плану строки, либо к дочернему плану строки.")
         if self.plan_string and self.child_plan_string:
             raise ValidationError("Ячейка часов не может быть привязана одновременно и к плану строки, и к дочернему плану строки.")
-
