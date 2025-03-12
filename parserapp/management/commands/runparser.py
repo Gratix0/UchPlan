@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from parserapp.parser import get_plan_rup, load_json_to_models, models_to_json
-from parserapp.models import StudyPlan, Cycle, ChildCycle, PlanString, ChildPlanString, ClockCell
+from parserapp.models import StudyPlan, Category, StudyCycle, Module, Disipline, ClockCell
 
 
 class Command(BaseCommand):
@@ -30,29 +30,25 @@ class Command(BaseCommand):
         """Выводит содержимое моделей в читаемом виде, начиная с учебного плана."""
         print("\n=== Учебные планы ===")
         for sp in StudyPlan.objects.all():
-            print(f"{sp.id} | {sp.name} "
-                  f"(Спец.: {sp.specialization_code}, ГОС: {sp.gos_type}, Дата: {sp.create_date})")
-            for cycle in sp.cycles.all():
-                print(f"   └─ Цикл: {cycle.id} | {cycle.identificator}: {cycle.cycles}")
-                for child in cycle.child_cycles.all():
-                    print(f"       └─ Дочерний цикл: {child.id} | {child.identificator}: {child.cycles}")
-                    for plan in child.plan_strings.all():
-                        print(f"           └─ План строки: {plan.id} | Дисциплина: {plan.discipline}")
-                        # Вывод ячеек часов для плана строки
-                        clock_cells = plan.clock_cells.all()
-                        if clock_cells:
-                            print("               └─ Ячейки часов:")
-                            for clock in clock_cells:
-                                parent = clock.plan_string.id if clock.plan_string else clock.child_plan_string.id
-                                print(f"                  ⏱ {clock.id} | Курс {clock.course}, Семестр {clock.semestr}, "
-                                      f"Часы: {clock.count_of_clocks} (Привязан к: {parent})")
-                        # Вывод дочерних планов строки
-                        for child_plan in plan.child_plan_strings.all():
-                            print(f"           └─ Дочерний план строки: {child_plan.id} | Дисциплина: {child_plan.discipline}")
-                            clock_cells = child_plan.clock_cells.all()
+            print(f"{sp.id} | {sp.name} (Спец.: {sp.specialization_code}, ГОС: {sp.gos_type}, Дата: {sp.create_date})")
+            for category in sp.cycles.all():
+                print(f"   └─ Категория: {category.id} | {category.identificator}: {category.cycles}")
+                for study_cycle in category.child_cycles.all():
+                    print(f"       └─ Учебный цикл: {study_cycle.id} | {study_cycle.identificator}: {study_cycle.cycles}")
+                    # Вывод модулей (План строк)
+                    for module in study_cycle.plan_strings.all():
+                        print(f"           └─ Модуль: {module.id} | Дисциплина: {module.name}")
+                        # Вывод дочерних планов строки (Дисциплины)
+                        for disipline in module.child_plan_strings.all():
+                            print(f"               └─ Дисциплина: {disipline.id} | {disipline.name}")
+                            clock_cells = disipline.clock_cells.all()
                             if clock_cells:
-                                print("               └─ Ячейки часов:")
+                                print("                   └─ Ячейки часов (привязанные к дисциплине):")
                                 for clock in clock_cells:
-                                    parent = clock.plan_string.id if clock.plan_string else clock.child_plan_string.id
-                                    print(f"                  ⏱ {clock.id} | Курс {clock.course}, Семестр {clock.semestr}, "
-                                          f"Часы: {clock.count_of_clocks} (Привязан к: {parent})")
+                                    print(f"                      ⏱ {clock.id} | Курс {clock.course}, Семестр {clock.semestr}, Часы: {clock.count_of_clocks}")
+                    # Вывод ячеек часов, прикрепленных к учебному циклу
+                    clock_cells = study_cycle.clock_cells.all()
+                    if clock_cells:
+                        print("           └─ Ячейки часов (привязанные к учебному циклу):")
+                        for clock in clock_cells:
+                            print(f"               ⏱ {clock.id} | Курс {clock.course}, Семестр {clock.semestr}, Часы: {clock.count_of_clocks}")

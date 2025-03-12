@@ -17,7 +17,7 @@ class StudyPlan(models.Model):
         verbose_name_plural = "Учебные планы"
 
 
-class Cycle(models.Model):
+class Category(models.Model):
     """
     Верхнеуровневый образовательный цикл.
     """
@@ -32,63 +32,63 @@ class Cycle(models.Model):
     )
 
     class Meta:
-        verbose_name = "Цикл"
-        verbose_name_plural = "Циклы"
+        verbose_name = "Категория"
+        verbose_name_plural = "Категории"
 
 
-class ChildCycle(models.Model):
+class StudyCycle(models.Model):
     """
-    Дочерний образовательный цикл, привязанный к Cycle.
+    Дочерний образовательный цикл, привязанный к StudyCycle.
     """
     id = models.UUIDField("ID", primary_key=True, default=uuid.uuid4, editable=False)
     identificator = models.CharField("Идентификатор", max_length=50)
     cycles = models.CharField("Название дочернего цикла", max_length=255)
-    parent_cycle = models.ForeignKey(
-        Cycle,
+    category = models.ForeignKey(
+        Category,
         on_delete=models.CASCADE,
         related_name='child_cycles',
-        verbose_name="Родительский цикл"
+        verbose_name="Категория"
     )
 
     class Meta:
-        verbose_name = "Дочерний цикл"
-        verbose_name_plural = "Дочерние циклы"
+        verbose_name = "Учебный цикл"
+        verbose_name_plural = "Учебные циклы"
 
 
-class PlanString(models.Model):
+class Module(models.Model):
     """
     План строки, относящийся к дочернему циклу.
     """
     id = models.UUIDField("ID", primary_key=True, default=uuid.uuid4, editable=False)
-    discipline = models.CharField("Дисциплина", max_length=255)
-    child_cycle = models.ForeignKey(
-        ChildCycle,
+    name = models.CharField("Дисциплина", max_length=255)
+    studey_cycle = models.ForeignKey(
+        StudyCycle,
         on_delete=models.CASCADE,
         related_name='plan_strings',
-        verbose_name="Дочерний цикл (блок)"
+        verbose_name="Учебный цикл"
     )
 
     class Meta:
-        verbose_name = "План строки"
-        verbose_name_plural = "Планы строк"
+        verbose_name = "Модуль"
+        verbose_name_plural = "Модули"
 
 
-class ChildPlanString(models.Model):
+class Disipline(models.Model):
     """
     Дочерний план строки – вложенная запись внутри родительского плана строки.
     """
     id = models.UUIDField("ID", primary_key=True, default=uuid.uuid4, editable=False)
-    discipline = models.CharField("Дисциплина", max_length=255)
-    parent_plan_string = models.ForeignKey(
-        PlanString,
+    name = models.CharField("Дисциплина", max_length=255)
+    module = models.ForeignKey(
+        Module,
         on_delete=models.CASCADE,
         related_name='child_plan_strings',
-        verbose_name="Родительский план строки"
+        verbose_name="Модуль"
     )
 
     class Meta:
-        verbose_name = "Дочерний план строки"
-        verbose_name_plural = "Дочерние планы строк"
+        verbose_name = "Дисциплина"
+        verbose_name_plural = "Дисциплины"
 
 
 class ClockCell(models.Model):
@@ -103,7 +103,7 @@ class ClockCell(models.Model):
     count_of_clocks = models.IntegerField("Количество часов", null=True, blank=True)
     # Связь с родительским планом строки
     plan_string = models.ForeignKey(
-        PlanString,
+        Disipline,
         on_delete=models.CASCADE,
         related_name='clock_cells',
         null=True,
@@ -112,7 +112,7 @@ class ClockCell(models.Model):
     )
     # Связь с дочерним планом строки
     child_plan_string = models.ForeignKey(
-        ChildPlanString,
+        StudyCycle,
         on_delete=models.CASCADE,
         related_name='clock_cells',
         null=True,

@@ -3,17 +3,14 @@ from xml.etree.ElementTree import Element
 from typing import List
 import json
 import uuid
-from parserapp.models import StudyPlan, Cycle, ChildCycle, PlanString, ChildPlanString, ClockCell
+from datetime import datetime
 
-tree = et.parse("gg.plx")
-root = tree.getroot()
-root_child = root[0][0]
-
+from parserapp.models import StudyPlan, Category, StudyCycle, Module, Disipline, ClockCell
 
 def get_plan_rup():
     """
     Парсит XML и формирует структуру данных с информацией об ООП и учебном плане.
-    Новая структура: OOP (StudyPlan) и список циклов (stady_plan),
+    Новая структура: ООП (StudyPlan) и список циклов (stady_plan),
     в которых находятся дочерние циклы, план строк и ячейки часов.
     """
     plan_dict = []
@@ -24,6 +21,10 @@ def get_plan_rup():
     plany_novie_chasy: List[Element] = []
     plany_stroky: List[Element] = []
     plany_stroky_childs: List[Element] = []
+
+    tree = et.parse("gg.plx")
+    root = tree.getroot()
+    root_child = root[0][0]
 
     for child in root_child:
         tag_name = child.tag.replace("{http://tempuri.org/dsMMISDB.xsd}", '')
@@ -96,7 +97,7 @@ def get_plan_rup():
                                 'discipline': child_string.get('Дисциплина'),
                                 'code_of_cycle_block': child['id'],
                                 'parent_string_id': parent_string_object['id'],
-                                'clock_cells': [],
+                                'clock_cells': []
                             }
                             for hour in plany_novie_chasy:
                                 new_hour_parent_id = hour.get("КодОбъекта")
@@ -134,19 +135,11 @@ def get_plan_rup():
     return rup
 
 
-import json
-import uuid
-from datetime import datetime
-
-from parserapp.models import StudyPlan, Cycle, ChildCycle, PlanString, ChildPlanString, ClockCell
-
 def load_json_to_models(rup_data):
     """
     Загружает данные из JSON-структуры, сформированной get_plan_rup(),
     в модели Django. Осуществляет предварительное преобразование даты.
     """
-
-    # Преобразование даты: из "2016-12-09T00:00:00" в дату. Потому-что джанго не схавает. Получим ValidationError
     create_date_str = rup_data.get("create_date")
     try:
         create_date = datetime.strptime(create_date_str, "%Y-%m-%dT%H:%M:%S").date()
@@ -162,26 +155,30 @@ def load_json_to_models(rup_data):
         gos_type=rup_data.get("gos_type")
     )
 
+    # Обрабатываем циклы (Category) и дочерние циклы (StudyCycle)
     for cycle in rup_data.get("stady_plan", []):
-        cycle_obj = Cycle.objects.create(
+        category_obj = Category.objects.create(
             id=cycle["id"],
             identificator=cycle.get("identificator"),
             cycles=cycle.get("cycles"),
             study_plan=study_plan_obj
         )
         for child in cycle.get("children", []):
-            child_cycle_obj = ChildCycle.objects.create(
+            study_cycle_obj = StudyCycle.objects.create(
                 id=child["id"],
                 identificator=child.get("identificator"),
                 cycles=child.get("cycles"),
-                parent_cycle=cycle_obj
+                category=category_obj
             )
             for plan in child.get("plans_of_string", []):
-                plan_obj = PlanString.objects.create(
+                # Создаем Module из плана строки
+                module_obj = Module.objects.create(
                     id=plan["id"],
-                    discipline=plan.get("discipline"),
-                    child_cycle=child_cycle_obj
+                    name=plan.get("discipline"),
+                    studey_cycle=study_cycle_obj
                 )
+                # Обрабатываем ClockCell для плана (Module)
+                # Привязываем их к StudyCycle через поле child_plan_string
                 existing_clock_ids = set()
                 for clock in plan.get("clock_cells", []):
                     if clock["id"] in existing_clock_ids:
@@ -195,13 +192,14 @@ def load_json_to_models(rup_data):
                         course=int(clock.get("course") or 0),
                         semestr=int(clock.get("semestr") or 0),
                         count_of_clocks=int(clock.get("count_of_clocks") or 0),
-                        plan_string=plan_obj
+                        child_plan_string=study_cycle_obj
                     )
+                # Обрабатываем дочерние планы строки (Disipline)
                 for child_plan in plan.get("children_strings", []):
-                    child_plan_obj = ChildPlanString.objects.create(
+                    disipline_obj = Disipline.objects.create(
                         id=child_plan["id"],
-                        discipline=child_plan.get("discipline"),
-                        parent_plan_string=plan_obj
+                        name=child_plan.get("discipline"),
+                        module=module_obj
                     )
                     for clock in child_plan.get("clock_cells", []):
                         ClockCell.objects.create(
@@ -211,7 +209,7 @@ def load_json_to_models(rup_data):
                             course=int(clock.get("course") or 0),
                             semestr=int(clock.get("semestr") or 0),
                             count_of_clocks=int(clock.get("count_of_clocks") or 0),
-                            child_plan_string=child_plan_obj
+                            plan_string=disipline_obj
                         )
 
 
@@ -231,61 +229,62 @@ def models_to_json():
             "gos_type": study_plan.gos_type,
             "stady_plan": []
         }
-        for cycle in study_plan.cycles.all():
-            cycle_dict = {
-                "id": str(cycle.id),
-                "identificator": cycle.identificator,
-                "cycles": cycle.cycles,
+        for category in study_plan.cycles.all():
+            category_dict = {
+                "id": str(category.id),
+                "identificator": category.identificator,
+                "cycles": category.cycles,
                 "children": []
             }
-            for child in cycle.child_cycles.all():
-                child_dict = {
-                    "id": str(child.id),
-                    "identificator": child.identificator,
-                    "cycles": child.cycles,
-                    "parent_id": str(child.parent_cycle.id),
+            for study_cycle in category.child_cycles.all():
+                study_cycle_dict = {
+                    "id": str(study_cycle.id),
+                    "identificator": study_cycle.identificator,
+                    "cycles": study_cycle.cycles,
+                    "parent_id": str(study_cycle.category.id),
                     "plans_of_string": []
                 }
-                for plan in child.plan_strings.all():
-                    plan_dict = {
-                        "id": str(plan.id),
-                        "discipline": plan.discipline,
-                        "code_of_cycle_block": str(child.id),
+                for module in study_cycle.plan_strings.all():
+                    module_dict = {
+                        "id": str(module.id),
+                        "discipline": module.name,
+                        "code_of_cycle_block": str(study_cycle.id),
                         "clock_cells": [],
                         "children_strings": []
                     }
-                    for clock in plan.clock_cells.all():
-                        plan_dict["clock_cells"].append({
+                    # Clock cells, прикрепленные к StudyCycle (от модуля)
+                    for clock in study_cycle.clock_cells.all():
+                        module_dict["clock_cells"].append({
                             "id": str(clock.id),
                             "code_of_type_work": clock.code_of_type_work,
                             "code_of_type_hours": clock.code_of_type_hours,
                             "course": clock.course,
                             "semestr": clock.semestr,
                             "count_of_clocks": clock.count_of_clocks,
-                            "parent_string_id": str(plan.id)
+                            "parent_string_id": str(module.id)
                         })
-                    for child_plan in plan.child_plan_strings.all():
-                        child_plan_dict = {
-                            "id": str(child_plan.id),
-                            "discipline": child_plan.discipline,
-                            "code_of_cycle_block": str(child.id),
-                            "parent_string_id": str(plan.id),
+                    for disipline in module.child_plan_strings.all():
+                        disipline_dict = {
+                            "id": str(disipline.id),
+                            "discipline": disipline.name,
+                            "code_of_cycle_block": str(study_cycle.id),
+                            "parent_string_id": str(module.id),
                             "clock_cells": []
                         }
-                        for clock in child_plan.clock_cells.all():
-                            child_plan_dict["clock_cells"].append({
+                        for clock in disipline.clock_cells.all():
+                            disipline_dict["clock_cells"].append({
                                 "id": str(clock.id),
                                 "code_of_type_work": clock.code_of_type_work,
                                 "code_of_type_hours": clock.code_of_type_hours,
                                 "course": clock.course,
                                 "semestr": clock.semestr,
                                 "count_of_clocks": clock.count_of_clocks,
-                                "parent_string_id": str(child_plan.id)
+                                "parent_string_id": str(disipline.id)
                             })
-                        plan_dict["children_strings"].append(child_plan_dict)
-                    child_dict["plans_of_string"].append(plan_dict)
-                cycle_dict["children"].append(child_dict)
-            study_plan_dict["stady_plan"].append(cycle_dict)
+                        module_dict["children_strings"].append(disipline_dict)
+                    study_cycle_dict["plans_of_string"].append(module_dict)
+                category_dict["children"].append(study_cycle_dict)
+            study_plan_dict["stady_plan"].append(category_dict)
         result.append(study_plan_dict)
 
     with open("exported_plan.json", "w", encoding="utf-8") as f:
@@ -306,18 +305,18 @@ if __name__ == "__main__":
     print("Study Plans:")
     for sp in StudyPlan.objects.all():
         print(sp)
-    print("Cycles:")
-    for cycle in Cycle.objects.all():
-        print(cycle)
-    print("Child Cycles:")
-    for child in ChildCycle.objects.all():
-        print(child)
-    print("Plan Strings:")
-    for plan in PlanString.objects.all():
-        print(plan)
-    print("Child Plan Strings:")
-    for cps in ChildPlanString.objects.all():
-        print(cps)
+    print("Categories:")
+    for category in Category.objects.all():
+        print(category)
+    print("Study Cycles:")
+    for sc in StudyCycle.objects.all():
+        print(sc)
+    print("Modules:")
+    for module in Module.objects.all():
+        print(module)
+    print("Disiplines:")
+    for disipline in Disipline.objects.all():
+        print(disipline)
     print("Clock Cells:")
     for clock in ClockCell.objects.all():
         print(clock)
