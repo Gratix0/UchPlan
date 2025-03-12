@@ -71,6 +71,8 @@ class Module(models.Model):
     class Meta:
         verbose_name = "Модуль"
         verbose_name_plural = "Модули"
+    warnings = models.BooleanField("Наличие предупреждений", default=False)
+    warning_description = models.TextField("Описание предупреждений", null=True, blank=True)
 
 
 class Disipline(models.Model):
@@ -89,6 +91,8 @@ class Disipline(models.Model):
     class Meta:
         verbose_name = "Дисциплина"
         verbose_name_plural = "Дисциплины"
+    warnings = models.BooleanField("Наличие предупреждений", default=False)
+    warning_description = models.TextField("Описание предупреждений", null=True, blank=True)
 
 
 class ClockCell(models.Model):

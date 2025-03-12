@@ -6,6 +6,21 @@ import uuid
 from datetime import datetime
 
 from parserapp.models import StudyPlan, Category, StudyCycle, Module, Disipline, ClockCell
+from pyaspeller import YandexSpeller
+
+def validate_text(text):
+    """
+    Проверяет текст на наличие ошибок с помощью Yandex Speller.
+    Возвращает список ошибок или None, если ошибок нет.
+    """
+    speller = YandexSpeller()
+    changes = speller.spell(text)
+    if changes:
+        errors = []
+        for change in changes:
+            errors.append(f"Возможно ошибка в слове '{change['word']}' возможно это подходящее слово: {change['s']}")
+        return errors
+    return None
 
 def get_plan_rup():
     """
@@ -172,10 +187,14 @@ def load_json_to_models(rup_data):
             )
             for plan in child.get("plans_of_string", []):
                 # Создаем Module из плана строки
+                module_name = plan.get("discipline")
+                module_warnings = validate_text(module_name)
                 module_obj = Module.objects.create(
                     id=plan["id"],
-                    name=plan.get("discipline"),
-                    studey_cycle=study_cycle_obj
+                    name=module_name,
+                    studey_cycle=study_cycle_obj,
+                    warnings=bool(module_warnings),
+                    warning_description=module_warnings
                 )
                 # Обрабатываем ClockCell для плана (Module)
                 # Привязываем их к StudyCycle через поле child_plan_string
@@ -196,10 +215,14 @@ def load_json_to_models(rup_data):
                     )
                 # Обрабатываем дочерние планы строки (Disipline)
                 for child_plan in plan.get("children_strings", []):
+                    discipline_name = child_plan.get("discipline")
+                    discipline_warnings = validate_text(discipline_name)
                     disipline_obj = Disipline.objects.create(
                         id=child_plan["id"],
-                        name=child_plan.get("discipline"),
-                        module=module_obj
+                        name=discipline_name,
+                        module=module_obj,
+                        warnings=bool(discipline_warnings),
+                        warning_description=discipline_warnings
                     )
                     for clock in child_plan.get("clock_cells", []):
                         ClockCell.objects.create(

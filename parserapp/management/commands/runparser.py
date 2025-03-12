@@ -1,3 +1,5 @@
+import json
+
 from django.core.management.base import BaseCommand
 from parserapp.parser import get_plan_rup, load_json_to_models, models_to_json
 from parserapp.models import StudyPlan, Category, StudyCycle, Module, Disipline, ClockCell
@@ -9,25 +11,22 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         self.stdout.write(self.style.WARNING("Запуск парсера..."))
 
-        # 1. Парсинг XML и сохранение в plan.json
-        plan_data = get_plan_rup()
-        self.stdout.write(self.style.SUCCESS("XML успешно спарсен и сохранён в plan.json"))
+        # 1. Загрузка данных из plan.json
+        with open("plan.json", "r", encoding="utf-8") as file:
+            plan_data = json.load(file)
+        self.stdout.write(self.style.SUCCESS("Данные успешно загружены из plan.json"))
 
         # 2. Загрузка JSON-данных в БД
         load_json_to_models(plan_data)
         self.stdout.write(self.style.SUCCESS("Данные успешно загружены в базу"))
 
-        # 3. Экспорт данных из БД в exported_plan.json
-        models_to_json()
-        self.stdout.write(self.style.SUCCESS("JSON успешно экспортирован в exported_plan.json"))
-
-        # 4. Вывод содержимого моделей в консоль
+        # 3. Вывод содержимого моделей в консоль (с информацией о предупреждениях)
         self.print_model_data()
 
         self.stdout.write(self.style.SUCCESS("Парсер успешно завершил работу!"))
 
     def print_model_data(self):
-        """Выводит содержимое моделей в читаемом виде, начиная с учебного плана."""
+        """Выводит содержимое моделей, включая информацию о предупреждениях."""
         print("\n=== Учебные планы ===")
         for sp in StudyPlan.objects.all():
             print(f"{sp.id} | {sp.name} (Спец.: {sp.specialization_code}, ГОС: {sp.gos_type}, Дата: {sp.create_date})")
@@ -35,18 +34,15 @@ class Command(BaseCommand):
                 print(f"   └─ Категория: {category.id} | {category.identificator}: {category.cycles}")
                 for study_cycle in category.child_cycles.all():
                     print(f"       └─ Учебный цикл: {study_cycle.id} | {study_cycle.identificator}: {study_cycle.cycles}")
-                    # Вывод модулей (План строк)
                     for module in study_cycle.plan_strings.all():
-                        print(f"           └─ Модуль: {module.id} | Дисциплина: {module.name}")
-                        # Вывод дочерних планов строки (Дисциплины)
+                        print(f"           └─ Модуль: {module.id} | Дисциплина: {module.name} | Warnings: {module.warnings} | Description: {module.warning_description or 'Нет'}")
                         for disipline in module.child_plan_strings.all():
-                            print(f"               └─ Дисциплина: {disipline.id} | {disipline.name}")
+                            print(f"               └─ Дисциплина: {disipline.id} | {disipline.name} | Warnings: {disipline.warnings} | Description: {disipline.warning_description or 'Нет'}")
                             clock_cells = disipline.clock_cells.all()
                             if clock_cells:
                                 print("                   └─ Ячейки часов (привязанные к дисциплине):")
                                 for clock in clock_cells:
                                     print(f"                      ⏱ {clock.id} | Курс {clock.course}, Семестр {clock.semestr}, Часы: {clock.count_of_clocks}")
-                    # Вывод ячеек часов, прикрепленных к учебному циклу
                     clock_cells = study_cycle.clock_cells.all()
                     if clock_cells:
                         print("           └─ Ячейки часов (привязанные к учебному циклу):")
