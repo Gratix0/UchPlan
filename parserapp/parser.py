@@ -11,6 +11,10 @@ import re
 
 _cached_whitelist = None  # Глобальная переменная для кеширования вайтлиста
 
+tree = et.parse("gg.plx")
+root = tree.getroot()
+root_child = root[0][0]
+
 def get_whitelist():
     """Возвращает множество слов из вайтлиста, используя кеш."""
     global _cached_whitelist

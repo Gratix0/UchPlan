@@ -26,10 +26,14 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.WARNING("Запуск парсера..."))
 
-        # 1. Загрузка данных из plan.json
-        with open("plan.json", "r", encoding="utf-8") as file:
-            plan_data = json.load(file)
-        self.stdout.write(self.style.SUCCESS("Данные успешно загружены из plan.json"))
+        # # 1. Загрузка данных из plan.json
+        # with open("plan.json", "r", encoding="utf-8") as file:
+        #     plan_data = json.load(file)
+        # self.stdout.write(self.style.SUCCESS("Данные успешно загружены из plan.json"))
+
+        plan_data = get_plan_rup()
+        self.stdout.write(self.style.SUCCESS("XML успешно спарсен и сохранён в plan.json"))
+
 
         # 2. Загрузка JSON-данных в БД
         load_json_to_models(plan_data)
