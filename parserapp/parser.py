@@ -7,6 +7,7 @@ from datetime import datetime
 
 from parserapp.models import StudyPlan, Category, StudyCycle, Module, Disipline, ClockCell, WhitelistWord
 from pyaspeller import YandexSpeller
+import re
 
 _cached_whitelist = None  # Глобальная переменная для кеширования вайтлиста
 
@@ -16,6 +17,42 @@ def get_whitelist():
     if _cached_whitelist is None:
         _cached_whitelist = set(WhitelistWord.objects.values_list('word', flat=True))
     return _cached_whitelist
+
+
+def validate_discipline_index(index: str, previous_indices: dict):
+    """
+    Проверяет формат индекса дисциплины и последовательность индексов.
+
+    Args:
+        index: Индекс дисциплины (например, "ОГСЭ.01").
+        previous_indices: Словарь, хранящий предыдущие индексы для каждого префикса.
+
+    Returns:
+        Список ошибок или None, если ошибок нет.
+    """
+    if not index:
+        return ["Индекс дисциплины отсутствует."]
+
+    match = re.match(r"([А-Я]+)\.(\d+)", index)
+    if not match:
+        return [f"Неверный формат индекса '{index}'. Ожидается формат 'Префикс.Число'."]
+
+    prefix = match.group(1)
+    number = int(match.group(2))
+
+    valid_prefixes = ["ОГСЭ", "ЕН", "ОПЦ", "ПЦ", "ПМ", "МДК", "УП", "ПП", "ПДП"]
+    if prefix not in valid_prefixes:
+        return [f"Недопустимый префикс '{prefix}' в индексе '{index}'. Допустимые префиксы: {', '.join(valid_prefixes)}."]
+
+    if prefix in previous_indices:
+        if number != previous_indices[prefix] + 1:
+            return [f"Неверная последовательность индекса '{index}'. Ожидается '{prefix}.{previous_indices[prefix] + 1}'."]
+    else:
+        if number != 1:
+            return [f"Неверная последовательность индекса '{index}'. Ожидается '{prefix}.1'."]
+
+    previous_indices[prefix] = number
+    return None
 
 def validate_text(text):
     """
@@ -38,7 +75,7 @@ def validate_text(text):
 def get_plan_rup():
     """
     Парсит XML и формирует структуру данных с информацией об ООП и учебном плане.
-    Новая структура: ООП (StudyPlan) и список циклов (stady_plan),
+    Новая структура: OOP (StudyPlan) и список циклов (stady_plan),
     в которых находятся дочерние циклы, план строк и ячейки часов.
     """
     plan_dict = []
@@ -49,10 +86,6 @@ def get_plan_rup():
     plany_novie_chasy: List[Element] = []
     plany_stroky: List[Element] = []
     plany_stroky_childs: List[Element] = []
-
-    tree = et.parse("gg.plx")
-    root = tree.getroot()
-    root_child = root[0][0]
 
     for child in root_child:
         tag_name = child.tag.replace("{http://tempuri.org/dsMMISDB.xsd}", '')
@@ -112,6 +145,7 @@ def get_plan_rup():
                     parent_string_object = {
                         'id': str(uuid.uuid4()),
                         'discipline': string.get('Дисциплина'),
+                        'code_of_discipline': string.get('ДисциплинаКод'),  # Возможно, это и есть индекс
                         'code_of_cycle_block': child['id'],
                         'clock_cells': [],
                         'children_strings': []
@@ -123,13 +157,14 @@ def get_plan_rup():
                             child_string_object = {
                                 'id': str(uuid.uuid4()),
                                 'discipline': child_string.get('Дисциплина'),
+                                'index': child_string.get('ДисциплинаКод'),  # Добавляем индекс
                                 'code_of_cycle_block': child['id'],
                                 'parent_string_id': parent_string_object['id'],
-                                'clock_cells': []
+                                'clock_cells': [],
                             }
                             for hour in plany_novie_chasy:
                                 new_hour_parent_id = hour.get("КодОбъекта")
-                                if new_hour_parent_id == child_string_id_local:
+                                if new_hour_parent_id == child_string_id_local and int(hour.get("Количество")) > 1:
                                     child_string_object['clock_cells'].append({
                                         'id': str(uuid.uuid4()),
                                         'code_of_type_work': hour.get("КодВидаРаботы"),
@@ -140,9 +175,10 @@ def get_plan_rup():
                                         'parent_string_id': child_string_object['id']
                                     })
                             parent_string_object['children_strings'].append(child_string_object)
+
                     for hour in plany_novie_chasy:
                         new_hour_parent_id = hour.get("КодОбъекта")
-                        if new_hour_parent_id == parent_string_id_local:
+                        if new_hour_parent_id == parent_string_id_local and int(hour.get("Количество")) > 1:
                             parent_string_object['clock_cells'].append({
                                 'id': str(uuid.uuid4()),
                                 'code_of_type_work': hour.get("КодВидаРаботы"),
@@ -161,6 +197,7 @@ def get_plan_rup():
     print("=== JSON data (from XML) ===")
     print(json.dumps(rup, ensure_ascii=False, indent=4))
     return rup
+
 
 
 def load_json_to_models(rup_data):
@@ -184,6 +221,7 @@ def load_json_to_models(rup_data):
     )
 
     all_warnings = []  # Список для хранения всех опечаток
+    previous_indices = {}  # Словарь для хранения предыдущих индексов
 
     # Проверяем имя StudyPlan
     study_plan_name = rup_data.get("name")
@@ -204,8 +242,8 @@ def load_json_to_models(rup_data):
             identificator=cycle.get("identificator"),
             cycles=category_name,
             study_plan=study_plan_obj,
-            warnings=bool(category_warnings),  # Добавляем поле warnings
-            warning_description=category_warnings  # Добавляем поле warning_description
+            warnings=bool(category_warnings),
+            warning_description=category_warnings
         )
         for child in cycle.get("children", []):
             # Проверяем имя StudyCycle
@@ -219,15 +257,15 @@ def load_json_to_models(rup_data):
                 identificator=child.get("identificator"),
                 cycles=study_cycle_name,
                 category=category_obj,
-                warnings=bool(study_cycle_warnings),  # Добавляем поле warnings
-                warning_description=study_cycle_warnings  # Добавляем поле warning_description
+                warnings=bool(study_cycle_warnings),
+                warning_description=study_cycle_warnings
             )
             for plan in child.get("plans_of_string", []):
                 # Создаем Module из плана строки
                 module_name = plan.get("discipline")
                 module_warnings = validate_text(module_name)
                 if module_warnings:
-                    all_warnings.extend(module_warnings)  # Добавляем опечатки в общий список
+                    all_warnings.extend(module_warnings)
                 module_obj = Module.objects.create(
                     id=plan["id"],
                     name=module_name,
@@ -255,15 +293,27 @@ def load_json_to_models(rup_data):
                 # Обрабатываем дочерние планы строки (Disipline)
                 for child_plan in plan.get("children_strings", []):
                     discipline_name = child_plan.get("discipline")
+                    discipline_index = child_plan.get("index")
+
                     discipline_warnings = validate_text(discipline_name)
                     if discipline_warnings:
-                        all_warnings.extend(discipline_warnings)  # Добавляем опечатки в общий список
+                        all_warnings.extend(discipline_warnings)
+
+                    # Валидация индекса
+                    index_warnings = validate_discipline_index(discipline_index, previous_indices)
+                    if index_warnings:
+                        print("=== Ошибки валидации индекса ===")
+                        for warning in index_warnings:
+                            print(warning)
+                        # all_warnings.extend(index_warnings) # Больше не нужно
+
                     disipline_obj = Disipline.objects.create(
                         id=child_plan["id"],
                         name=discipline_name,
+                        index=discipline_index,
                         module=module_obj,
-                        warnings=bool(discipline_warnings),
-                        warning_description=discipline_warnings
+                        warnings=bool(discipline_warnings or index_warnings),
+                        warning_description=discipline_warnings + index_warnings if discipline_warnings and index_warnings else discipline_warnings or index_warnings
                     )
                     for clock in child_plan.get("clock_cells", []):
                         ClockCell.objects.create(

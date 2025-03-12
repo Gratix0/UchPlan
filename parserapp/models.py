@@ -47,6 +47,7 @@ class Module(models.Model):
 class Disipline(models.Model):
     id = models.CharField(primary_key=True, max_length=255)
     name = models.CharField(max_length=255, null=True)
+    index = models.CharField(max_length=255, null=True)  # Добавляем поле для индекса
     module = models.ForeignKey(Module, related_name='child_plan_strings', on_delete=models.CASCADE)
     warnings = models.BooleanField(default=False)
     warning_description = models.JSONField(null=True, blank=True)
