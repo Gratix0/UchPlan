@@ -1,7 +1,9 @@
 import json
 
 from django.core.management.base import BaseCommand
-from parserapp.parser import get_plan_rup, load_json_to_models, models_to_json
+from parserapp.parser import RUP_parser
+from parserapp.models_loader import load_json_to_models
+from parserapp.main import models_to_json
 from parserapp.models import StudyPlan, Category, StudyCycle, Module, Disipline, ClockCell, WhitelistWord
 
 
@@ -26,17 +28,14 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.WARNING("Запуск парсера..."))
 
-        # 1. Загрузка данных из plan.json
-        with open("plan.json", "r", encoding="utf-8") as file:
-            plan_data = json.load(file)
-        self.stdout.write(self.style.SUCCESS("Данные успешно загружены из plan.json"))
-
-        # plan_data = get_plan_rup()
-        # self.stdout.write(self.style.SUCCESS("XML успешно спарсен и сохранён в plan.json"))
-
+        # 1. Парсим XML и загружаем в JSON
+        parser = RUP_parser()
+        plan_data = parser.get_plan()
+        rup_data = parser.rup  # Получаем словарь rup
+        self.stdout.write(self.style.SUCCESS("Данные успешно загружены из XML"))
 
         # 2. Загрузка JSON-данных в БД
-        load_json_to_models(plan_data)
+        load_json_to_models(rup_data)  # Передаем rup_data
         self.stdout.write(self.style.SUCCESS("Данные успешно загружены в базу"))
 
         # 3. Вывод содержимого моделей в консоль (с информацией о предупреждениях)
@@ -49,7 +48,7 @@ class Command(BaseCommand):
         print("\n=== Учебные планы ===")
         for sp in StudyPlan.objects.all():
             print(
-                f"{sp.id} | {sp.name} (Спец.: {sp.specialization_code}, ГОС: {sp.gos_type}, Дата: {sp.create_date}) | Warnings: {sp.warnings} | Description: {sp.warning_description or 'Нет'}")
+                f"{sp.id} | Квалификация: {sp.qualification}, Год начала: {sp.admission_year}, Дата: {sp.create_date} | Warnings: {sp.warnings} | Description: {sp.warning_description or 'Нет'}")
             for category in sp.cycles.all():
                 print(
                     f"   └─ Категория: {category.id} | {category.identificator}: {category.cycles} | Warnings: {category.warnings} | Description: {category.warning_description or 'Нет'}")
@@ -68,9 +67,3 @@ class Command(BaseCommand):
                                 for clock in clock_cells:
                                     print(
                                         f"                      ⏱ {clock.id} | Курс {clock.course}, Семестр {clock.semestr}, Часы: {clock.count_of_clocks}")
-                    clock_cells = study_cycle.clock_cells.all()
-                    if clock_cells:
-                        print("           └─ Ячейки часов (привязанные к учебному циклу):")
-                        for clock in clock_cells:
-                            print(
-                                f"               ⏱ {clock.id} | Курс {clock.course}, Семестр {clock.semestr}, Часы: {clock.count_of_clocks}")

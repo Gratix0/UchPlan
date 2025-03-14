@@ -2,15 +2,14 @@ from django.db import models
 
 class StudyPlan(models.Model):
     id = models.CharField(primary_key=True, max_length=255)
-    specialization_code = models.CharField(max_length=255, null=True)
-    name = models.CharField(max_length=255, null=True)
+    qualification = models.CharField(max_length=255, null=True)
+    admission_year = models.CharField(max_length=255, null=True)
     create_date = models.DateField(null=True)
-    gos_type = models.CharField(max_length=255, null=True)
     warnings = models.BooleanField(default=False)
     warning_description = models.JSONField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.name} ({self.specialization_code})"
+        return f"{self.qualification} ({self.admission_year})"
 
 class Category(models.Model):
     id = models.CharField(primary_key=True, max_length=255)
@@ -63,7 +62,7 @@ class ClockCell(models.Model):
     semestr = models.IntegerField(null=True)
     count_of_clocks = models.IntegerField(null=True)
     plan_string = models.ForeignKey(Disipline, related_name='clock_cells', on_delete=models.CASCADE, null=True)
-    child_plan_string = models.ForeignKey(StudyCycle, related_name='clock_cells', on_delete=models.CASCADE, null=True)
+    module_plan_string = models.ForeignKey(Module, related_name='clock_cells', on_delete=models.CASCADE, null=True)
 
     def __str__(self):
         return f"Курс {self.course}, Семестр {self.semestr}, Часы: {self.count_of_clocks}"
